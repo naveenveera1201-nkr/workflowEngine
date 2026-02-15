@@ -44,7 +44,8 @@ class ProcessFlowEngineTwoTest {
      */
     @Test
     void testCompleteHappyPathApproval() throws Exception {
-        String instanceId = pfEngine.createProcessInstance("p200", "user@company.com");
+        String instanceId = pfEngine.createProcessInstance("p200", "user@company.com",
+                null);
         assertNotNull(instanceId);
 
         // Level 1 actions
@@ -79,7 +80,8 @@ class ProcessFlowEngineTwoTest {
      */
     @Test
     void testLevel1RejectionTerminatesProcess() throws Exception {
-        String instanceId = pfEngine.createProcessInstance("p200", "user@company.com");
+        String instanceId = pfEngine.createProcessInstance("p200", "user@company.com",
+                null);
 
         ProcessInstance pi = pfEngine.performAction(
                 instanceId, "REJECT", "manager@company.com", "Rejected at L1"
@@ -97,7 +99,8 @@ class ProcessFlowEngineTwoTest {
      */
     @Test
     void testReturnAndResubmitFlow() throws Exception {
-        String instanceId = pfEngine.createProcessInstance("p200", "user@company.com");
+        String instanceId = pfEngine.createProcessInstance("p200", "user@company.com",
+                null);
 
         // Level 1 return
         ProcessInstance pi = pfEngine.performAction(
@@ -123,7 +126,8 @@ class ProcessFlowEngineTwoTest {
      */
     @Test
     void testInvalidActionThrowsException() throws Exception {
-        String instanceId = pfEngine.createProcessInstance("p200", "user@company.com");
+        String instanceId = pfEngine.createProcessInstance("p200", "user@company.com",
+                null);
 
         ProcessFlowException ex = assertThrows(
                 ProcessFlowException.class,
@@ -140,7 +144,8 @@ class ProcessFlowEngineTwoTest {
      */
     @Test
     void testActionOnCompletedProcessFails() throws Exception {
-        String instanceId = pfEngine.createProcessInstance("p200", "user@company.com");
+        String instanceId = pfEngine.createProcessInstance("p200", "user@company.com",
+                null);
 
         pfEngine.performAction(instanceId, "REJECT", "manager@company.com", "Rejected");
 
@@ -157,7 +162,8 @@ class ProcessFlowEngineTwoTest {
      */
     @Test
     void testProcessHistoryIsRecorded() throws Exception {
-        String instanceId = pfEngine.createProcessInstance("p200", "user@company.com");
+        String instanceId = pfEngine.createProcessInstance("p200", "user@company.com",
+                null);
 
         pfEngine.performAction(instanceId, "APPROVE", "manager@company.com", "OK");
         pfEngine.performAction(instanceId, "ESCALATE", "tech@company.com", "Escalated");

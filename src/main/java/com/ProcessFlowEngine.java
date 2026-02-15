@@ -54,6 +54,10 @@ public class ProcessFlowEngine implements AutoCloseable {
     public ProcessFlowEngine() throws ProcessFlowException {
         this(ProcessFlowConfig.builder().build());
     }
+    
+    public ProcessRegistry getProcessRegistry() {
+    	return this.processRegistry;
+    }
 
     public ProcessFlowEngine(ProcessFlowConfig config) throws ProcessFlowException {
         this.config = config;
@@ -131,9 +135,9 @@ public class ProcessFlowEngine implements AutoCloseable {
         }
     }
 
-    public String createProcessInstance(String processCode, String createdBy) throws ProcessFlowException {
-        return createProcessInstance(processCode, createdBy, null);
-    }
+//    public String createProcessInstance(String processCode, String createdBy, Map<String, Object> data) throws ProcessFlowException {
+//        return createProcessInstance(processCode, createdBy, null);
+//    }
 
     public String createProcessInstance(String processCode, String createdBy, Map<String, Object> data) throws ProcessFlowException {
         if (CommonUtils.isBlank(processCode)) {

@@ -43,7 +43,8 @@ class ProcessFlowEngineOneTest {
 
         String instanceId = pfEngine.createProcessInstance(
                 "p100",
-                "user1@company.com"
+                "user1@company.com",
+                null
         );
 
         List<String> actions = pfEngine.getAvailableActions(instanceId);
@@ -59,7 +60,8 @@ class ProcessFlowEngineOneTest {
 
         String instanceId = pfEngine.createProcessInstance(
                 "p100",
-                "user2@company.com"
+                "user2@company.com",
+                null
         );
 
         ProcessInstance updated = pfEngine.performAction(
@@ -78,7 +80,8 @@ class ProcessFlowEngineOneTest {
 
         String instanceId = pfEngine.createProcessInstance(
                 "p100",
-                "user3@company.com"
+                "user3@company.com",
+                null
         );
 
         // Level 1 approve
@@ -106,7 +109,8 @@ class ProcessFlowEngineOneTest {
 
         String instanceId = pfEngine.createProcessInstance(
                 "p100",
-                "user5@company.com"
+                "user5@company.com",
+                null
         );
 
         pfEngine.performAction(instanceId, "Approve", "manager@company.com", "L1");
@@ -130,7 +134,8 @@ class ProcessFlowEngineOneTest {
 
         String instanceId = pfEngine.createProcessInstance(
                 "p101",
-                "user6@company.com"
+                "user6@company.com",
+                null
         );
 
         List<String> availableActions =  pfEngine.getAvailableActions(instanceId);
