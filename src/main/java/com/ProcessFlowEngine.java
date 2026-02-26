@@ -1,5 +1,30 @@
 package com;
 
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
+import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
+import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import org.bson.BsonDocument;
+import org.bson.BsonInt32;
+import org.bson.Document;
+import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.codecs.pojo.PojoCodecProvider;
+import org.bson.types.ObjectId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.configs.ConfigLoader;
 import com.configs.ConfigType;
 import com.configs.registries.process.InMemoryProcessRegistry;
@@ -14,32 +39,22 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.models.*;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.models.ApprovalStep;
 import com.models.Process;
+import com.models.ProcessFlowConfig;
+import com.models.ProcessHistory;
+import com.models.ProcessInstance;
+import com.models.Status;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
 import com.mongodb.MongoTimeoutException;
 import com.mongodb.ProcessQueryBuilder;
-import com.mongodb.client.*;
-import org.bson.BsonDocument;
-import org.bson.BsonInt32;
-import org.bson.Document;
-import org.bson.codecs.configuration.CodecRegistry;
-import org.bson.codecs.pojo.PojoCodecProvider;
-import org.bson.types.ObjectId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
-import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
-import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
+import com.mongodb.client.FindIterable;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
 
 public class ProcessFlowEngine implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(ProcessFlowEngine.class);
@@ -58,10 +73,15 @@ public class ProcessFlowEngine implements AutoCloseable {
     public ProcessRegistry getProcessRegistry() {
     	return this.processRegistry;
     }
+    
+    public ObjectMapper getObjectMapper() {
+    	return this.objectMapper;
+    }
 
     public ProcessFlowEngine(ProcessFlowConfig config) throws ProcessFlowException {
         this.config = config;
         this.objectMapper = JsonMapper.builder()
+        		.addModule(new JavaTimeModule())
                 .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
@@ -140,7 +160,8 @@ public class ProcessFlowEngine implements AutoCloseable {
 //    }
 
     public String createProcessInstance(String processCode, String createdBy, Map<String, Object> data) throws ProcessFlowException {
-        if (CommonUtils.isBlank(processCode)) {
+    	
+    	if (CommonUtils.isBlank(processCode)) {
             throw new ProcessFlowException("Process code must be non-empty");
         }
         if (CommonUtils.isBlank(createdBy)) {
@@ -149,11 +170,13 @@ public class ProcessFlowEngine implements AutoCloseable {
 
 
         Process process = processRegistry.get(processCode);
+        String statusDesc = statusRegistry.getDescription(process.getInitialStatus());
 
         ProcessInstance instance = new ProcessInstance();
         instance.setId(new ObjectId());
         instance.setProcessCode(processCode);
         instance.setCurrentStatus(process.getInitialStatus());
+        instance.setCurrentStatusDesc(statusDesc);
         instance.setCurrentLevel(Boolean.TRUE.equals(process.getApprovalFlow()) ? 1 : 0);
         instance.setCreatedBy(createdBy);
         instance.setModifiedBy(createdBy);
@@ -171,16 +194,53 @@ public class ProcessFlowEngine implements AutoCloseable {
         instance.getHistory().add(history);
 
         // Retry mechanism for transient failures
-        return executeWithRetry(() -> {
-            MongoCollection<ProcessInstance> collection = database.getCollection("process_instances", ProcessInstance.class);
-            collection.insertOne(instance);
-            logger.info("Created process instance {}", instance.getId());
-            return instance.getId().toHexString();
-        }, "create process instance");
-    }
+        MongoCollection<ProcessInstance> collection = database.getCollection("process_instances", ProcessInstance.class);
+       
+		if (isDuplicate(collection, instance.getData())) {
+			logger.info("Duplicates detected {}", instance.getData());
+			try {
+				return objectMapper.writeValueAsString(Map.of("statusCode", "400","statusDesc", "Duplicates detected"));
+			} catch (JsonProcessingException e) {
+				e.printStackTrace();
+			}
+		}
 
-    public ProcessInstance performAction(String instanceId, String action, String performedBy, String comments) throws ProcessFlowException {
-        if (CommonUtils.isBlank(instanceId)) {
+		String s = executeWithRetry(() -> {
+			collection.insertOne(instance);
+			logger.info("Created process instance {}", instance.getId());
+			return instance.getId().toHexString();
+		}, "create process instance");
+
+		String result = "";
+		try {
+			Map<String, Object> map = objectMapper.convertValue(getProcessInstance(s), Map.class);
+			map.put("statusCode", 200);
+			result = objectMapper.writeValueAsString(map);
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		} catch (ProcessFlowException e) {
+			e.printStackTrace();
+		}
+
+		return result;
+    }
+    
+	public boolean isDuplicate(MongoCollection<ProcessInstance> collection, Map<String, Object> data) {
+
+		 return collection.find(and(
+		            eq("data.email", data.get("email")),
+		            eq("data.username", data.get("username")),
+		            eq("data.password", data.get("password"))
+		    ))
+		    .limit(1)
+		    .first() != null;
+	}
+
+    public String performAction(String instanceId, String action, String performedBy, String comments) throws ProcessFlowException {
+        
+    	String result = "";
+    	
+    	if (CommonUtils.isBlank(instanceId)) {
             throw new ProcessFlowException("Instance ID code must be non-empty");
         }
         if (CommonUtils.isBlank(action)) {
@@ -190,7 +250,8 @@ public class ProcessFlowEngine implements AutoCloseable {
             throw new ProcessFlowException("Performed by must be non-empty");
         }
 
-        return executeWithRetry(() -> {
+        ProcessInstance processInstance = executeWithRetry(() -> {
+        	
             MongoCollection<ProcessInstance> collection = database.getCollection("process_instances", ProcessInstance.class);
 
             // Use optimistic locking if enabled
@@ -229,11 +290,13 @@ public class ProcessFlowEngine implements AutoCloseable {
             Integer oldStatus = instance.getCurrentStatus();
             Integer oldLevel = instance.getCurrentLevel();
             instance.setCurrentStatus(step.getNextStatus());
+            String statusDesc = statusRegistry.getDescription(step.getNextStatus());
+            instance.setCurrentStatusDesc(statusDesc);
 
             // Update level
             instance.setCurrentLevel(step.getLevel());
 
-            instance.setModifiedDate(Instant.now());
+            instance.setModifiedDate(LocalDateTime.now());
             instance.setModifiedBy(performedBy);
             instance.setVersion(instance.getVersion() + 1);
 
@@ -263,6 +326,16 @@ public class ProcessFlowEngine implements AutoCloseable {
             return instance;
 
         }, "perform action");
+        
+        try {
+			Map<String, Object> map = new HashMap<String, Object>();
+			map.put("statusCode", 200);
+			result = objectMapper.writeValueAsString(map);
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		}
+        
+        return result;
     }
 
     private void moveToCompletedCollection(ProcessInstance instance, Integer originalVersion)
@@ -307,6 +380,8 @@ public class ProcessFlowEngine implements AutoCloseable {
             ProcessInstance instance = collection
                     .find(eq("_id", new ObjectId(instanceId)))
                     .first();
+            
+            instance.setId(new ObjectId(instanceId));
 
             if (instance == null) {
                 throw new ProcessFlowException("Process instance not found: " + instanceId);

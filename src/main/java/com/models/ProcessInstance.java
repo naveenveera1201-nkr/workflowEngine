@@ -3,6 +3,7 @@ package com.models;
 import org.bson.types.ObjectId;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -13,17 +14,21 @@ public class ProcessInstance {
     private String processCode;
     private Integer currentStatus;
     private Integer currentLevel;
-    private Instant createdDate;
-    private Instant modifiedDate;
+    private LocalDateTime createdDate;
+    private LocalDateTime modifiedDate;
     private String createdBy;
-    private String modifiedBy;
+	private String modifiedBy;
     private List<ProcessHistory> history;
     private Map<String, Object> data; // Extensible data
     private Integer version;
+    private String currentStatusDesc;
+    private String statusCode;
+	private String statusDesc;
+
 
     public ProcessInstance() {
-        this.createdDate = Instant.now();
-        this.modifiedDate = Instant.now();
+        this.createdDate = LocalDateTime.now();
+        this.modifiedDate = LocalDateTime.now();
         this.version = 1;
     }
 
@@ -59,19 +64,19 @@ public class ProcessInstance {
         this.currentLevel = currentLevel;
     }
 
-    public Instant getCreatedDate() {
+    public LocalDateTime getCreatedDate() {
         return createdDate;
     }
 
-    public void setCreatedDate(Instant createdDate) {
+    public void setCreatedDate(LocalDateTime createdDate) {
         this.createdDate = createdDate;
     }
 
-    public Instant getModifiedDate() {
+    public LocalDateTime getModifiedDate() {
         return modifiedDate;
     }
 
-    public void setModifiedDate(Instant modifiedDate) {
+    public void setModifiedDate(LocalDateTime modifiedDate) {
         this.modifiedDate = modifiedDate;
     }
 
@@ -114,4 +119,29 @@ public class ProcessInstance {
     public void setVersion(Integer version) {
         this.version = version;
     }
+    public String getStatusCode() {
+		return statusCode;
+	}
+
+	public void setStatusCode(String statusCode) {
+		this.statusCode = statusCode;
+	}
+
+	public String getStatusDesc() {
+		return statusDesc;
+	}
+
+	public void setStatusDesc(String statusDesc) {
+		this.statusDesc = statusDesc;
+	}
+	
+    public String getCurrentStatusDesc() {
+		return currentStatusDesc;
+	}
+
+	public void setCurrentStatusDesc(String currentStatusDesc) {
+		this.currentStatusDesc = currentStatusDesc;
+	}
+
+
 }

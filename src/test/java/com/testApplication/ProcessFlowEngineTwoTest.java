@@ -55,22 +55,37 @@ class ProcessFlowEngineTwoTest {
         assertTrue(actions.contains("RETURN"));
 
         // L1 APPROVE
-        ProcessInstance pi = pfEngine.performAction(instanceId, "APPROVE", "manager@company.com", "Initial approval");
+//        ProcessInstance pi = pfEngine.performAction(instanceId, "APPROVE", "manager@company.com", "Initial approval");
+        
+        String  result = pfEngine.performAction(instanceId, "APPROVE", "manager@company.com", "Initial approval");
+		ProcessInstance pi = pfEngine.getObjectMapper().convertValue(result, ProcessInstance.class);
+
         assertEquals(20, pi.getCurrentStatus());
+        
+        
         // Now at level 2
 
         // L2 ESCALATE (must happen from status 20, before L2 APPROVE)
-        pi = pfEngine.performAction(instanceId, "ESCALATE", "tech@company.com", "Escalated");
+        
+//        pi = pfEngine.performAction(instanceId, "ESCALATE", "tech@company.com", "Escalated");
+        
+        result = pfEngine.performAction(instanceId, "ESCALATE", "tech@company.com", "Escalated");
+		pi = pfEngine.getObjectMapper().convertValue(result, ProcessInstance.class);
+
         assertEquals(25, pi.getCurrentStatus());
         // Now at level 3
 
         // L3 APPROVE
-        pi = pfEngine.performAction(instanceId, "APPROVE", "director@company.com", "Senior approved");
+//        pi = pfEngine.performAction(instanceId, "APPROVE", "director@company.com", "Senior approved");
+		result = pfEngine.performAction(instanceId, "APPROVE", "director@company.com", "Senior approved");
+		pi = pfEngine.getObjectMapper().convertValue(result, ProcessInstance.class);
         assertEquals(40, pi.getCurrentStatus());
         // Now at level 4
 
         // L4 APPROVE (final)
-        pi = pfEngine.performAction(instanceId, "APPROVE", "ceo@company.com", "Final approval");
+//        pi = pfEngine.performAction(instanceId, "APPROVE", "ceo@company.com", "Final approval");
+        result = pfEngine.performAction(instanceId, "APPROVE", "ceo@company.com", "Final approval");
+		pi = pfEngine.getObjectMapper().convertValue(result, ProcessInstance.class);
         assertEquals(60, pi.getCurrentStatus());
         assertNotNull(pfEngine.getCompletedProcessInstance(instanceId));
     }
@@ -83,9 +98,13 @@ class ProcessFlowEngineTwoTest {
         String instanceId = pfEngine.createProcessInstance("p200", "user@company.com",
                 null);
 
-        ProcessInstance pi = pfEngine.performAction(
-                instanceId, "REJECT", "manager@company.com", "Rejected at L1"
-        );
+       String result = pfEngine.performAction(
+               instanceId, "REJECT", "manager@company.com", "Rejected at L1"
+               );
+       ProcessInstance pi = pfEngine.getObjectMapper().convertValue(result, ProcessInstance.class);
+//        ProcessInstance pi = pfEngine.performAction(
+//                instanceId, "REJECT", "manager@company.com", "Rejected at L1"
+//        );
 
         assertEquals(90, pi.getCurrentStatus());
 
@@ -103,9 +122,13 @@ class ProcessFlowEngineTwoTest {
                 null);
 
         // Level 1 return
-        ProcessInstance pi = pfEngine.performAction(
-                instanceId, "RETURN", "manager@company.com", "Need more info"
-        );
+        String result = pfEngine.performAction(
+        		 instanceId, "RETURN", "manager@company.com", "Need more info"
+                );
+        ProcessInstance pi = pfEngine.getObjectMapper().convertValue(result, ProcessInstance.class);
+//        ProcessInstance pi = pfEngine.performAction(
+//                instanceId, "RETURN", "manager@company.com", "Need more info"
+//        );
         assertEquals(15, pi.getCurrentStatus());
 
         // Only RESUBMIT should be allowed
@@ -114,9 +137,13 @@ class ProcessFlowEngineTwoTest {
         assertEquals("RESUBMIT", actions.get(0));
 
         // Resubmit
-        pi = pfEngine.performAction(
-                instanceId, "RESUBMIT", "user@company.com", "Updated details"
-        );
+        result = pfEngine.performAction(
+        		instanceId, "RESUBMIT", "user@company.com", "Updated details"
+               );
+       pi = pfEngine.getObjectMapper().convertValue(result, ProcessInstance.class);
+//        pi = pfEngine.performAction(
+//                instanceId, "RESUBMIT", "user@company.com", "Updated details"
+//        );
         assertEquals(10, pi.getCurrentStatus());
         assertEquals(1, pi.getCurrentLevel());
     }

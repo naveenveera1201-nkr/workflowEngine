@@ -5,14 +5,22 @@
       "Description" : "Pending for approval"
     },
     {
-      "Code" : 20,
+      "Code" : 50,
       "Description" : "Rejected"
     },
+	{
+	  "Code" : 100,
+	  "Description" : "Return"
+	},
     {
-      "Code" : 30,
+      "Code" : 60,
       "Description" : "Approved"
     },
-    {
+	{
+		"Code": 30,
+		"Description": "Pending for Additional approval"
+	},
+	{
       "Code" : 40,
       "Description" : "Self Approved"
     }

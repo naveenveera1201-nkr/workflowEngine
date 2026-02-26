@@ -64,12 +64,9 @@ class ProcessFlowEngineOneTest {
                 null
         );
 
-        ProcessInstance updated = pfEngine.performAction(
-                instanceId,
-                "Approve",
-                "manager@company.com",
-                "L1 approved"
-        );
+		String result = pfEngine.performAction(instanceId, "Approve", "manager@company.com", "L1 approved");
+        
+				ProcessInstance updated = pfEngine.getObjectMapper().convertValue(result, ProcessInstance.class);
 
         assertEquals(30, updated.getCurrentStatus());
         assertEquals(1, updated.getCurrentLevel());
@@ -93,13 +90,16 @@ class ProcessFlowEngineOneTest {
         );
 
         // Level 2 approve (IsTerminal = true)
-        ProcessInstance updated = pfEngine.performAction(
+        String result = pfEngine.performAction(
                 instanceId,
                 "Approve",
                 "director@company.com",
                 "Final approval"
         );
 
+		ProcessInstance updated = pfEngine.getObjectMapper().convertValue(result, ProcessInstance.class);
+
+		
         assertNotNull(pfEngine.getCompletedProcessInstance(instanceId));
         assertEquals(60, updated.getCurrentStatus());
     }

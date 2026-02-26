@@ -28,7 +28,7 @@ public class ProcessFlowConfigLoader {
 				.processConfigPath(processFlowOnePath)
 				.statusConfigPath(processFlowStatusOnePath)
 				.connectionString("mongodb://localhost:27017/")
-				.databaseName("process-flow-engine-test").build();
+				.databaseName("process-flow-engine").build();
 		
 		log.info("ProcessFlowConfigLoader processflowengine ended...");
 

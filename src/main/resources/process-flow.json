@@ -50,7 +50,7 @@
       "Code": "p101",
       "ShortDesc": "USER",
       "Description": "User",
-      "InitialStatus": 30,
+      "InitialStatus": 10,
       "ApprovalFlow": false
     }
   ]
