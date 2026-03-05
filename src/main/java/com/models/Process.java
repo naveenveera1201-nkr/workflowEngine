@@ -12,8 +12,11 @@ public class Process {
     private Boolean approvalFlow;
     private Integer noOfLevels;
     private List<ApprovalStep> approvalSteps;
+    private String collectionName;
+    private String objectName;
 
-    public Process() {
+   
+	public Process() {
     }
 
     public String getCode() {
@@ -84,4 +87,21 @@ public class Process {
     public int hashCode() {
         return Objects.hash(code);
     }
+    
+    public String getCollectionName() {
+		return collectionName;
+	}
+
+	public void setCollectionName(String collectionName) {
+		this.collectionName = collectionName;
+	}
+
+	public String getObjectName() {
+		return objectName;
+	}
+
+	public void setObjectName(String objectName) {
+		this.objectName = objectName;
+	}
+
 }

@@ -47,11 +47,47 @@
       ]
     },
     {
-      "Code": "p101",
-      "ShortDesc": "USER",
-      "Description": "User",
-      "InitialStatus": 10,
-      "ApprovalFlow": false
-    }
+		"Code": "p101",
+		"ShortDesc": "USER",
+		"Description": "User",
+		"InitialStatus": 10,
+		"ApprovalFlow": false
+	},
+	{
+		"Code": "p102",
+		"ShortDesc": "Register Invester",
+		"Description": "Invester",
+		"InitialStatus": 60,
+		"ApprovalFlow": false,
+		"CollectionName": "profile",
+		"ObjectName": "profile"
+	},
+	{
+		"Code": "p103",
+		"ShortDesc": "Register bankdetils",
+		"Description": "Invester",
+		"InitialStatus": 60,
+		"ApprovalFlow": false,
+		"CollectionName": "profile",
+		"ObjectName": "bankDetails"
+	},
+	{
+		"Code": "p104",
+		"ShortDesc": "Register kyc",
+		"Description": "Invester",
+		"InitialStatus": 60,
+		"ApprovalFlow": false,
+		"CollectionName": "profile",
+		"ObjectName": "kycDetails"
+	},
+	{
+		"Code": "p105",
+		"ShortDesc": "Register nominee",
+		"Description": "Invester",
+		"InitialStatus": 60,
+		"ApprovalFlow": false,
+		"CollectionName": "profile",
+		"ObjectName": "nomineeDetails"
+	}
   ]
 }

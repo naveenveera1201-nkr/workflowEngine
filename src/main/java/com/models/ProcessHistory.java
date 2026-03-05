@@ -1,8 +1,12 @@
 package com.models;
 
 import java.time.Instant;
-import java.util.Date;
+import java.util.Map;
 
+import lombok.Getter;
+import lombok.Setter;
+@Getter
+@Setter
 public class ProcessHistory {
 
     private Integer level;
@@ -12,7 +16,9 @@ public class ProcessHistory {
     private String performedBy;
     private Instant performedDate;
     private String comments;
-    private Long durationMs; // Time spent in previous status
+    private Long durationMs; 
+    private Map<String, Object> data; 
+    // Time spent in previous status
 
     public ProcessHistory() {
         this.performedDate = Instant.now();

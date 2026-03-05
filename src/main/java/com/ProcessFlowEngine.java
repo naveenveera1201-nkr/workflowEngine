@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -21,9 +22,11 @@ import org.bson.BsonInt32;
 import org.bson.Document;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.CollectionUtils;
 
 import com.configs.ConfigLoader;
 import com.configs.ConfigType;
@@ -34,13 +37,16 @@ import com.configs.registries.status.StatusRegistry;
 import com.exceptions.OptimisticLockException;
 import com.exceptions.ProcessFlowException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.models.ApprovalStep;
+import com.models.InvesterProfile;
 import com.models.Process;
 import com.models.ProcessFlowConfig;
 import com.models.ProcessHistory;
@@ -55,6 +61,8 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.result.UpdateResult;
 
 public class ProcessFlowEngine implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(ProcessFlowEngine.class);
@@ -369,7 +377,8 @@ public class ProcessFlowEngine implements AutoCloseable {
     }
 
     public ProcessInstance getProcessInstance(String instanceId) throws ProcessFlowException {
-        if(CommonUtils.isBlank(instanceId)) {
+       
+    	if(CommonUtils.isBlank(instanceId)) {
             throw new ProcessFlowException("Instance ID cannot be null");
         }
 
@@ -500,6 +509,132 @@ public class ProcessFlowEngine implements AutoCloseable {
         throw new ProcessFlowException(String.format("Failed to %s after %d attempts", operationName, attempts), lastException);
     }
 
+    
+	/*** New methods for mutual fund ***/    
+    
+	public String registration(Map<String, Object> data, String processCode) throws ProcessFlowException {
+
+		if (CollectionUtils.isEmpty(data)) {
+			throw new ProcessFlowException("Request data cannot be empty");
+		}
+
+		InvesterProfile instance = executeWithRetry(() -> {
+			
+			Process process = processRegistry.get(processCode);
+
+			if (process == null) {
+				throw new ProcessFlowException("Invalid process code: " + processCode);
+			}
+
+			MongoCollection<InvesterProfile> collection = database.getCollection(process.getCollectionName(),
+					InvesterProfile.class);
+
+			InvesterProfile profile;
+
+			Map<String, Object> profileData;
+
+			if (data.get("id") != null) {
+
+				profile = getInvesterProfile(data.get("id").toString(), process.getCollectionName());
+				profileData = profile.getData();
+
+			} else {
+
+				profile = new InvesterProfile();
+				profileData = new HashMap<>();
+			}
+
+			// add new object
+			profileData.put(process.getObjectName(), data);
+
+			// set updated data
+			profile.setData(profileData);
+
+			// update profile
+
+			// 🔹 Status update
+			Integer initialStatus = process.getInitialStatus();
+			profile.setCurrentStatus(initialStatus);
+			profile.setCurrentStatusDesc(statusRegistry.getDescription(initialStatus));
+
+			profile.setModifiedDate(LocalDateTime.now());
+			profile.setModifiedBy("SYSTEM");
+			
+
+			save(profile, collection);
+
+			return profile;
+
+		}, "registration");
+
+		return "{\"statusCode\":200}";
+	}
+
+	public InvesterProfile getInvesterProfile(String instanceId, String collectionName) throws ProcessFlowException {
+
+		if (CommonUtils.isBlank(instanceId)) {
+			throw new ProcessFlowException("Instance ID cannot be blank");
+		}
+
+		return executeWithRetry(() -> {
+
+			MongoCollection<InvesterProfile> collection = database.getCollection(collectionName,
+					InvesterProfile.class);
+
+			InvesterProfile instance = collection.find(Filters.eq("_id", new ObjectId(instanceId))).first();
+
+			if (instance == null) {
+				throw new ProcessFlowException("Process instance not found: " + instanceId);
+			}
+
+			return instance;
+
+		}, "get invester profile");
+	}
+
+	private void save(InvesterProfile instance, MongoCollection<InvesterProfile> collection)
+			throws ProcessFlowException {
+
+		if (instance.getId() == null) {
+			
+			if (instance.getData() != null && instance.getData().get("profileId") != null) {
+				
+				Bson filter = Filters.and(Filters.eq("data.id", instance.getData().get("profileId")));
+				
+				InvesterProfile res = collection.find(filter).first();
+
+				if (Objects.nonNull(res)) {
+					UpdateResult replaced = collection.replaceOne(filter, instance);
+					return;
+				}
+			}
+			collection.insertOne(instance);
+			return;
+		}
+
+		Bson filter = Filters.and(Filters.eq("_id", instance.getId()));
+
+		UpdateResult result = collection.replaceOne(filter, instance);
+
+		if (result.getModifiedCount() == 0) {
+			throw new OptimisticLockException("Document modified by another transaction");
+		}
+	}
+	
+	private void addHistory(InvesterProfile profile) {
+
+	    InvesterProfile history = new InvesterProfile();
+	    history.setData(profile.getData());
+	    history.setModifiedDate(LocalDateTime.now());
+
+	    if (profile.getHistory() == null) {
+	        profile.setHistory(new ArrayList<>());
+	    }
+
+	    profile.getHistory().add(history);
+	}
+    
+    
     @FunctionalInterface
     private interface RetryableOperation<T> {
         T execute() throws Exception;
